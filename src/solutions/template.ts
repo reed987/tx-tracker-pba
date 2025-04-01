@@ -5,9 +5,13 @@ import type {
   NewBlockEvent,
   NewTransactionEvent,
   OutputAPI,
+  Settled,
 } from "../types"
 
 export default function yourGhHandle(api: API, outputApi: OutputAPI) {
+  const settledTxs = new Set<string>()
+  const pendingTxs: string[] = []
+
   return (event: IncomingEvent) => {
     // Requirements:
     //
@@ -38,18 +42,46 @@ export default function yourGhHandle(api: API, outputApi: OutputAPI) {
     //     b) older than the currently finalized block.
 
     const onNewBlock = ({ blockHash, parent }: NewBlockEvent) => {
-      // TODO:: implement it
+
+      //TODO add more complex logic
+
+      console.log('Got new block')
+      console.log('Got block', blockHash)
+      console.log('Got parent', parent)
+
+      const settledState: Settled = {
+        blockHash,
+        ...(
+          { type: "valid", successful: true })
+      }
+      
+
+      outputApi.onTxSettled(blockHash, settledState)
     }
 
     const onNewTx = ({ value: transaction }: NewTransactionEvent) => {
-      // TODO:: implement it
+      console.log('Got new transaction', transaction)
+
+      if (!settledTxs.has(transaction)) {
+        pendingTxs.push(transaction)
+      }
     }
 
     const onFinalized = ({ blockHash }: FinalizedEvent) => {
-      // TODO:: implement it
+
+      //TODO add more complex logic
+      console.log('Got Finalized')
+
+      const settledState: Settled = {
+        blockHash,
+        ...(
+          { type: "valid", successful: true })
+      }
+
+      outputApi.onTxDone(pendingTxs[0], settledState)
+
     }
 
-    return (event: IncomingEvent) => {
       switch (event.type) {
         case "newBlock": {
           onNewBlock(event)
@@ -62,6 +94,5 @@ export default function yourGhHandle(api: API, outputApi: OutputAPI) {
         case "finalized":
           onFinalized(event)
       }
-    }
   }
 }
